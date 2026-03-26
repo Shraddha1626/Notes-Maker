@@ -1,0 +1,47 @@
+.* {
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Consolas;
+}
+
+body {
+  background:#0a0f1c;
+  color:#e5e7eb;
+}
+
+.app {
+  display:flex;
+  height:100vh;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width:220px;
+  background:#020617;
+  padding:20px;
+  border-right:1px solid #0f172a;
+}
+
+.sidebar h2 {
+  color:#22c55e;
+  margin-bottom:20px;
+}
+
+.sidebar button {
+  width:100%;
+  margin-top:10px;
+  padding:10px;
+  background:#111827;
+  border:none;
+  color:#22c55e;
+  cursor:pointer;
+  border-radius:6px;
+}
+
+/* MAIN */
+.main {
+  flex:1;
+  display:grid;
+  grid-template-columns:1fr 1.5fr;
+}
