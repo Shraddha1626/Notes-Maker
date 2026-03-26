@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Notes</title>
+
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <h2>⚡ Notes</h2>
+    <button onclick="loadNotes()">📂 Load Notes</button>
+    <button onclick="startVoice()">🎤 Voice Input</button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- EDITOR -->
+    <div class="editor">
+      <input id="title" placeholder="Title">
+      <textarea id="note" placeholder="Write your note..."></textarea>
+      <button onclick="saveNote()">Save Note</button>
+    </div>
+
+    <!-- NOTES -->
+    <div class="notes">
+      <input id="search" placeholder="Search notes..." oninput="searchNotes()">
+      <div id="notesList"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
