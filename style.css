@@ -45,3 +45,74 @@ body {
   display:grid;
   grid-template-columns:1fr 1.5fr;
 }
+
+/* EDITOR */
+.editor {
+  padding:20px;
+  border-right:1px solid #0f172a;
+}
+
+.editor input,
+.editor textarea {
+  width:100%;
+  margin-bottom:10px;
+  padding:10px;
+  background:#020617;
+  border:1px solid #1e293b;
+  color:#fff;
+}
+
+.editor textarea {
+  height:150px;
+}
+
+.editor button {
+  width:100%;
+  padding:10px;
+  background:#22c55e;
+  border:none;
+  color:black;
+  font-weight:bold;
+}
+
+/* NOTES PANEL */
+.notes {
+  padding:20px;
+  overflow-y:auto;
+}
+
+.notes input {
+  width:100%;
+  margin-bottom:15px;
+  padding:10px;
+  background:#020617;
+  border:1px solid #1e293b;
+  color:white;
+}
+
+/* NOTE CARD */
+.note {
+  background:#020617;
+  border:1px solid #1e293b;
+  padding:15px;
+  margin-bottom:10px;
+  border-left:3px solid #22c55e;
+}
+
+.note h3 {
+  margin-bottom:5px;
+}
+
+.actions {
+  margin-top:10px;
+  display:flex;
+  gap:10px;
+}
+
+.actions button {
+  padding:5px 10px;
+  background:#111827;
+  border:none;
+  color:#22c55e;
+  cursor:pointer;
+}
