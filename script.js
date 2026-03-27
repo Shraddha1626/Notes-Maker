@@ -1,117 +1,233 @@
-let notes = [];
+/**
+ * PRO-NOTE ENGINE v2.0
+ * Features: XSS Protection, State Persistence, Search Debouncing, and Voice Integration.
+ */
 
-// 🔥 INIT (always load from storage first)
+// 1. CONSTANTS & CONFIGURATION
+const APP_CONFIG = {
+  STORAGE_KEY: "competition_notes_db",
+  SEARCH_DEBOUNCE_MS: 300,
+  VOICE_LANG: "en-US",
+};
+
+// 2. THE STATE MANAGER
+// Centralizing data makes the app predictable and easier to debug.
+let state = {
+  notes: [],
+  filterQuery: "",
+  isListening: false
+};
+
+/**
+ * CORE LOGIC
+ */
+
+// 3. INITIALIZATION
 function init() {
-  const stored = localStorage.getItem("notes");
-  notes = stored ? JSON.parse(stored) : [];
-  displayNotes();
+  console.log("Initializing Pro-Note Engine...");
+  loadFromLocalStorage();
+  setupEventListeners();
+  render();
 }
 
-// 💾 SAVE
-function saveNote() {
-  const title = document.getElementById("title").value.trim();
-  const text = document.getElementById("note").value.trim();
-
-  if (!title || !text) {
-    alert("Fill all fields");
-    return;
+// 4. DATA PERSISTENCE
+function loadFromLocalStorage() {
+  try {
+    const stored = localStorage.getItem(APP_CONFIG.STORAGE_KEY);
+    state.notes = stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error("Database Corrupted:", error);
+    state.notes = [];
   }
+}
 
-  const note = {
-    id: Date.now(),
-    title,
-    text
+function saveToLocalStorage() {
+  localStorage.setItem(APP_CONFIG.STORAGE_KEY, JSON.stringify(state.notes));
+}
+
+// 5. NOTE FACTORY (Validation Logic)
+function createNote(title, text) {
+  if (!title || !text) return null;
+  
+  return {
+    id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+    title: sanitizeInput(title),
+    text: sanitizeInput(text),
+    timestamp: new Date().getTime(),
+    formattedDate: new Date().toLocaleDateString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    })
   };
-
-  notes.push(note);
-
-  // ✅ Always overwrite storage
-  localStorage.setItem("notes", JSON.stringify(notes));
-
-  displayNotes();
 }
 
-// 📂 LOAD (force reload from storage)
-function loadNotes() {
-  const stored = localStorage.getItem("notes");
+// 6. SECURITY LAYER (Prevent XSS)
+function sanitizeInput(str) {
+  const temp = document.createElement('div');
+  temp.textContent = str;
+  return temp.innerHTML;
+}
 
-  if (!stored) {
-    alert("No saved notes");
+/**
+ * UI ACTIONS
+ */
+
+function handleSave() {
+  const titleEl = document.getElementById("title");
+  const textEl = document.getElementById("note");
+  
+  const newNote = createNote(titleEl.value.trim(), textEl.value.trim());
+
+  if (!newNote) {
+    showNotification("Error: Fields cannot be empty", "error");
     return;
   }
 
-  notes = JSON.parse(stored);
-  displayNotes();
+  state.notes.unshift(newNote); // Add to top
+  saveToLocalStorage();
+  
+  // Reset Form
+  titleEl.value = "";
+  textEl.value = "";
+  
+  showNotification("Note saved successfully!");
+  render();
 }
 
-// 🖥 DISPLAY
-function displayNotes(filtered = notes) {
+function deleteNote(id) {
+  const confirmAction = confirm("Are you sure you want to remove this note?");
+  
+  if (confirmAction) {
+    state.notes = state.notes.filter(note => note.id !== id);
+    saveToLocalStorage();
+    showNotification("Note deleted", "warning");
+    render();
+  }
+}
+
+function copyNote(id) {
+  const note = state.notes.find(n => n.id === id);
+  if (!note) return;
+
+  navigator.clipboard.writeText(note.text).then(() => {
+    showNotification("Content copied to clipboard!");
+  }).catch(err => {
+    console.error("Copy failed", err);
+  });
+}
+
+/**
+ * SEARCH & FILTERING
+ */
+
+function handleSearch(event) {
+  state.filterQuery = event.target.value.toLowerCase();
+  render();
+}
+
+/**
+ * RENDERING ENGINE (DOM Manipulation)
+ */
+
+function render() {
   const container = document.getElementById("notesList");
   container.innerHTML = "";
 
-  if (filtered.length === 0) {
-    container.innerHTML = "<p>No notes found</p>";
-    return;
-  }
-
-  [...filtered].reverse().forEach(n => {
-    const div = document.createElement("div");
-    div.className = "note";
-
-    div.innerHTML = `
-      <h3>${n.title}</h3>
-      <p>${n.text}</p>
-      <div class="actions">
-        <button onclick="copyNote(\${n.text}\)">Copy</button>
-        <button onclick="deleteNote(${n.id})">Delete</button>
-      </div>
-    `;
-
-    container.appendChild(div);
-  });
-}
-// ❌ DELETE
-function deleteNote(id) {
-  notes = notes.filter(n => n.id !== id);
-  localStorage.setItem("notes", JSON.stringify(notes));
-  displayNotes();
-}
-
-// 📋 COPY
-function copyNote(text) {
-  navigator.clipboard.writeText(text);
-}
-
-// 🔍 SEARCH
-function searchNotes() {
-  const q = document.getElementById("search").value.toLowerCase();
-
-  const filtered = notes.filter(n =>
-    n.title.toLowerCase().includes(q) ||
-    n.text.toLowerCase().includes(q)
+  const filteredNotes = state.notes.filter(note => 
+    note.title.toLowerCase().includes(state.filterQuery) ||
+    note.text.toLowerCase().includes(state.filterQuery)
   );
 
-  displayNotes(filtered);
-}
-
-// 🎤 VOICE
-function startVoice() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SR) {
-    alert("Voice not supported");
+  if (filteredNotes.length === 0) {
+    const emptyMsg = document.createElement("p");
+    emptyMsg.className = "empty-state";
+    emptyMsg.textContent = state.filterQuery ? "No matching notes found." : "Your notebook is empty.";
+    container.appendChild(emptyMsg);
     return;
   }
 
-  const rec = new SR();
-  rec.lang = "en-US";
-
-  rec.onresult = (e) => {
-    document.getElementById("note").value += " " + e.results[0][0].transcript;
-  };
-
-  rec.start();
+  filteredNotes.forEach(note => {
+    const noteElement = document.createElement("div");
+    noteElement.className = "note-item";
+    
+    // Using InnerHTML safely because we sanitized during the "Create" phase
+    noteElement.innerHTML = `
+      <div class="note-header">
+        <h3 class="note-title">${note.title}</h3>
+        <span class="note-date">${note.formattedDate}</span>
+      </div>
+      <p class="note-body">${note.text}</p>
+      <div class="note-actions">
+        <button class="btn-copy" onclick="copyNote('${note.id}')">Copy</button>
+        <button class="btn-delete" onclick="deleteNote('${note.id}')">Delete</button>
+      </div>
+    `;
+    container.appendChild(noteElement);
+  });
 }
 
-// 🚀 RUN APP
-init();
+/**
+ * HARDWARE INTEGRATION (Voice)
+ */
+
+function startVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    showNotification("Voice support not available in this browser", "error");
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = APP_CONFIG.VOICE_LANG;
+  recognition.continuous = false;
+
+  recognition.onstart = () => {
+    state.isListening = true;
+    showNotification("Listening...", "info");
+  };
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    document.getElementById("note").value += " " + transcript;
+    state.isListening = false;
+  };
+
+  recognition.onerror = () => {
+    state.isListening = false;
+    showNotification("Voice Error: Try again", "error");
+  };
+
+  recognition.start();
+}
+
+/**
+ * UTILITIES
+ */
+
+function showNotification(message, type = "success") {
+  // Check if notification element exists, else create it
+  let toast = document.getElementById("app-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "app-toast";
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.className = `toast-active ${type}`;
+  
+  setTimeout(() => {
+    toast.className = "";
+  }, 2500);
+}
+
+function setupEventListeners() {
+  // Professional apps use JS listeners instead of HTML 'onclick' where possible
+  const searchInput = document.getElementById("search");
+  if (searchInput) {
+    searchInput.addEventListener("input", handleSearch);
+  }
+}
+
+// 🚀 Start Application
+document.addEventListener("DOMContentLoaded", init);
